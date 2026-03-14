@@ -1,15 +1,15 @@
 import streamlit as st
 import requests
 import json
+from datetime import datetime
 
-# 1. 노션 설정 (Streamlit Cloud의 Secrets 기능을 쓰면 안전합니다)
-NOTION_TOKEN = st.secrets.get("NOTION_TOKEN", "여기에_토큰_입력")
-DATABASE_ID = st.secrets.get("DATABASE_ID", "여기에_ID_입력")
+# 1. 노션 설정
+NOTION_TOKEN = st.secrets.get("NOTION_TOKEN", "")
+DATABASE_ID = st.secrets.get("DATABASE_ID", "")
 
 st.set_page_config(page_title="영업 상담 일지", page_icon="📝")
 
-# 2. URL 파라미터로 담당자 인식 (?user=이름)
-# 예: https://share.streamlit.io/.../?user=Daniel
+# 2. URL 파라미터로 담당자 인식
 query_params = st.query_params
 current_agent = query_params.get("user", "미지정")
 
@@ -26,6 +26,7 @@ with st.form("consulting_form", clear_on_submit=True):
         contact = st.text_input("연락처")
         
     with col2:
+        # 노션 속성명에 맞춰 '상담항목' (띄어쓰기 제거)
         category = st.selectbox("상담 항목 *", 
                                 ["수전합리화", "태양광", "법인", "광고", "백렌탈"])
         clova_link = st.text_input("클로바 노트 링크")
@@ -37,25 +38,30 @@ with st.form("consulting_form", clear_on_submit=True):
 
 # 4. 노션 전송 로직
 if submit_button:
-    if not company or not category:
-        st.error("업체명과 상담 항목은 필수입니다!")
+    if not company:
+        st.error("업체명은 필수입니다!")
     else:
+        # 오늘 날짜 가져오기 (YYYY-MM-DD 형식)
+        today = datetime.now().strftime("%Y-%m-%d")
+        
         headers = {
             "Authorization": f"Bearer {NOTION_TOKEN}",
             "Content-Type": "application/json",
             "Notion-Version": "2022-06-28"
         }
 
+        # 노션 표의 실제 이름과 100% 일치하도록 매핑
         payload = {
             "parent": {"database_id": DATABASE_ID},
             "properties": {
                 "업체명": {"title": [{"text": {"content": company}}]},
                 "연락처": {"rich_text": [{"text": {"content": contact}}]},
-                "상담 항목": {"select": {"name": category}},
+                "상담항목": {"select": {"name": category}}, # 띄어쓰기 제거됨
                 "미팅내용": {"rich_text": [{"text": {"content": meeting_notes}}]},
-                "기타특이사항": {"rich_text": [{"text": {"content": other_notes}}]},
+                "기타 특이사항": {"rich_text": [{"text": {"content": other_notes}}]}, # 띄어쓰기 추가됨
                 "상담자": {"select": {"name": current_agent}},
-                "클로바링크": {"url": clova_link if clova_link else None}
+                "클로바링크": {"url": clova_link if clova_link else None},
+                "작성일": {"date": {"start": today}} # 새로 추가된 날짜 항목
             }
         }
 
@@ -70,4 +76,4 @@ if submit_button:
         except Exception as e:
             st.error(f"❌ 네트워크 오류: {e}")
 
-st.info(f"💡 담당자 '{current_agent}'님으로 기록됩니다. 링크가 본인 이름인지 확인해주세요.")
+st.info(f"💡 담당자 '{current_agent}'님으로 기록됩니다.")
