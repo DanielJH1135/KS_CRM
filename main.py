@@ -21,7 +21,7 @@ if user_param:
 else:
     current_agent = st.selectbox(
         "작성자를 선택해주세요", 
-        ["다니엘", "이정현", "팀원A", "팀원B", "팀원C"],
+        ["박성배", "장세진", "이우영", "이정현", "PA"],
         index=None,
         placeholder="담당자 선택 필수"
     )
